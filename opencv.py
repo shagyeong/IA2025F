@@ -83,20 +83,13 @@ def upscale(src,size,scale)->np.array:
     return dst
 
 # 정답열 경로 표시 함수
-def drawpath(src,ans,scale)->None:
-    ans=ans*scale
+def drawpath(src,ans,scale,thickness)->None:
+    ans=ans*scale # scaled answer coordinate
     ans=ans+((scale+1)//2)
     for i in range(0,ans.shape[0]-1,1):
-        ans1=ans[i]
-        ans2=ans[i+1]
-        if   ans1[0]-ans2[0]==0: # 행 좌표가 같음 - 가로 방향 경로
-            for j in range(ans1[1],ans2[1],1):
-                src[ans1[0]][j]=RED
-        elif ans1[1]-ans2[1]==0: # 열 좌표가 같음 - 세로 방향 경로
-            for j in range(ans1[0],ans2[0],1):
-                src[j][ans1[1]]=RED
-        else:
-            print("ans error")  
+        ans1=(ans[i][1],  ans[i][0])
+        ans2=(ans[i+1][1],ans[i+1][0])
+        cv2.line(src,ans1,ans2,RED,thickness)
 
 # 원본 맵 업스케일링
 map=np.zeros((60,60,3),np.uint8)
@@ -130,6 +123,6 @@ init=(0,0); map[0][0]=RED
 goal=(4,4); map[4][4]=RED
 map=upscale(map,5,15); cv2.imshow("map_small",map)
 ans=np.array([[0,0],[1,0],[1,1],[1,2],[2,2],[2,3],[3,3],[3,4],[4,4]],np.uint8)
-drawpath(map,ans,15); cv2.imshow("map_small_drawpath",map)
+drawpath(map,ans,15,3); cv2.imshow("map_small_drawpath",map)
 
 cv2.waitKey(0)
