@@ -7,7 +7,7 @@
 ```
 $ python3 opencv.py
 ```
-#### upscale()
+#### upscale(): 맵 업스케일
 ```
 def upscale(src,size,scale)->np.array:
 ```
@@ -17,13 +17,14 @@ scale: 업스케일링 배율
 |맵 원본|15배 업스케일 맵|
 |---|---|
 |<img src="./static/upscale.png">|<img src="./static/upscale_dst.png">|
-#### drawpath()
+#### drawpath(): 정답열 시각화
 ```
-def drawpath(src,ans,scale)->None:
+def drawpath(src,ans,scale,thcikness)->None:
 ```
 src: 업스케일된 맵 행렬 영상  
 ans: 정답열 열거형(np.array)  
 scale: 업스케일링 배율  
-|맵 원본|경로가 표시된 맵|
+thickness: 선 굵기
+|맵 원본|경로가 표시된 맵(선 굵기 3)|
 |---|---|
 |<img src="./static/drawpath_src.png">|<img src="./static/drawpath_dst.png">|
