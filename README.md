@@ -1,12 +1,16 @@
 # IA2025F: 2025-2 인공지능입문(다)반 팀 프로젝트
+<!-- ## 구현 알고리즘 -->
 <!-- astar -->
 <!-- bfs -->
 <!-- dfs -->
+<!-- ... -->
 ## 시각화
-#### opencv.py 실행
+#### colorize(): 맵 색상화
 ```
-$ python3 opencv.py
+def colorize(src,size)->np.array:
 ```
+src: 원본 맵 *리스트* - 0, 1, "S", "G"로 표현  
+size: 정방형 맵 사이즈(60x60 맵일 경우 60 전달)  
 #### upscale(): 맵 업스케일
 ```
 def upscale(src,size,scale)->np.array:
