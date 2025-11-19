@@ -31,10 +31,8 @@ def upscale(src,size,scale)->np.array:
 
 # 정답열 경로 표시 함수
 def drawpath(src,ans,scale,thickness)->None:
-    print(ans)
     ans=ans*scale # scaled answer coordinate
     ans=ans+((scale+1)//2)
-    print(ans)
     for i in range(0,ans.shape[0]-1,1):
         ans1=(ans[i][1],  ans[i][0])
         ans2=(ans[i+1][1],ans[i+1][0])
