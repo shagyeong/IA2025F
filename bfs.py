@@ -1,10 +1,11 @@
 import numpy as np
 import cv2
 import collections
+import time # 시간 측정을 위한 time 모듈 추가
 
 # --- 색상 세팅 ---
 YEL = (0, 255, 255)  # yellow (벽)
-PUR = (153, 0, 102) # purple (길)
+PUR = (153, 0, 102)  # purple (길)
 RED = (0, 0, 255)    # red (시작, 끝, 경로)
 
 # --- 맵 원본 (60x60) ---
@@ -37,8 +38,8 @@ l = [
     [1,1,1,0,1,0,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,0,0,0,0,0,1,0,1,1,1,0,1,1,1,0,0,1,1,0,1,0,0,0,0,1,1,1,0,1,0,1,0,0,0,1,0,1,1,1],
     [1,1,1,1,0,1,0,1,1,0,1,1,0,0,1,1,1,0,0,0,1,0,1,1,0,0,0,0,1,0,0,1,1,1,0,1,0,1,0,1,1,0,1,0,1,0,0,1,0,1,0,0,0,1,0,0,1,1,0,1],
     [1,1,1,1,0,0,0,1,0,1,1,1,0,1,1,0,1,1,1,1,1,1,0,1,0,0,0,0,1,0,1,1,0,0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0,1,1,1,0,1,0,1,1,0,0,1],
-    [1,1,0,0,1,0,0,1,0,1,0,0,0,1,0,1,0,1,1,1,1,1,0,1,0,0,0,1,0,1,1,1,1,1,1,0,1,0,0,0,0,1,0,1,1,0,1,0,0,1,0,1,0,1,0,1,0,0,1,1],
-    [1,1,1,1,1,1,0,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1,0,0,1,1,0,1,0,0,0,1,1,1,1,1,1,1,0,1],
+    [1,1,0,0,1,0,0,1,0,1,0,0,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,0,1,0,1,1,1,1,1,0,1,0,0,0,0,1,0,1,1,0,1,0,0,1,0,1,0,1,0,1,0,0,1,1],
+    [1,1,1,1,1,1,0,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,1,0,0,0,0,0,1,0,1,0,1,0,0,1,0,1,1,1,1,0,0,1,1,0,1,0,0,0,1,1,1,1,1,1,1,0,1],
     [1,1,0,0,1,0,1,0,1,0,0,1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,0,1,1,0,0,0,1,0,1,1,0,0,0,1,0,1,0,1,1,1,1],
     [1,1,0,1,0,0,0,0,1,1,1,1,0,1,1,1,0,1,1,0,0,0,0,0,1,1,1,0,0,1,1,1,0,1,1,0,0,1,1,0,1,0,0,0,0,1,1,0,1,1,1,1,1,1,0,0,1,0,1,1],
     [1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,1,0,0,0,1,0,1,0,0,1,1,0,0,0,0,1,1,1,0,1,0,1,1,0,0,1,1,1,1,1,1,1,0,0,1,1],
@@ -71,10 +72,11 @@ l = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ]
 
-# --- 1. BFS 길찾기 함수 ---
+# --- 1. BFS 길찾기 함수 (수정됨: 노드 수 및 시간 측정 로직 추가) ---
 def find_path_bfs(grid):
     """
     주어진 맵(list-of-lists)을 기반으로 BFS를 사용해 'S'에서 'G'까지의 경로를 찾습니다.
+    실행 시간과 탐색 노드 수를 반환합니다.
     """
     
     rows = len(grid)
@@ -82,7 +84,7 @@ def find_path_bfs(grid):
     
     start = None
     goal = None
-
+    
     # 1. 시작점(S)과 도착점(G) 위치 찾기
     for r in range(rows):
         for c in range(cols):
@@ -93,20 +95,24 @@ def find_path_bfs(grid):
         if start and goal:
             break
     
-    if not start:
-        return None, "시작점 'S'를 찾을 수 없습니다."
-    if not goal:
-        return None, "도착점 'G'를 찾을 수 없습니다."
+    if not start or not goal:
+        return None, "시작점 'S' 또는 도착점 'G'를 찾을 수 없습니다.", 0, 0
 
     # 2. BFS 초기화
     queue = collections.deque([start])
     visited = {start}
     parent_map = {start: None} # 경로 역추적용
+    
+    # *** 성능 측정 변수 추가 ***
+    nodes_explored = 0
+    start_time = time.time()
 
     # 3. BFS 탐색
     path_found = False
     while queue:
         current_r, current_c = queue.popleft()
+        
+        nodes_explored += 1 # 탐색 노드 수 증가 (큐에서 꺼낼 때 카운트)
 
         if (current_r, current_c) == goal:
             path_found = True
@@ -125,18 +131,21 @@ def find_path_bfs(grid):
                     queue.append((r, c))
                     parent_map[(r, c)] = (current_r, current_c)
 
+    end_time = time.time()
+    execution_time = end_time - start_time
+
     # 4. 경로 재구성
     if not path_found:
-        return None, "경로를 찾을 수 없습니다."
+        return None, "경로를 찾을 수 없습니다.", execution_time, nodes_explored
 
     path = []
     current = goal
     while current is not None:
         path.append(current)
-        current = parent_map[current]
+        current = parent_map.get(current) # 안전하게 .get() 사용
     
     path.reverse() # S -> G 순서로 변경
-    return path, "경로 찾기 성공"
+    return path, "경로 찾기 성공", execution_time, nodes_explored
 
 # --- 2. 시각화 함수 ---
 
@@ -149,6 +158,7 @@ def upscale(src, size, scale) -> np.array:
         for j in range(0, size, 1):
             for k in range(0, scale, 1):
                 for l in range(0, scale, 1):
+                    # BGR 순서로 복사
                     dst[i * scale + k][j * scale + l] = src[i][j]
     return dst
 
@@ -156,11 +166,8 @@ def upscale(src, size, scale) -> np.array:
 def drawpath(src_image, path_array, scale, color, thickness=3) -> None:
     """
     Numpy 경로 배열을 받아 업스케일된 이미지에 cv2.line으로 경로를 그립니다.
-    path_array: [[r1, c1], [r2, c2], ...] 형태의 numpy 배열
     """
     # 각 셀의 중심 좌표로 변환
-    # (r, c) * scale -> 왼쪽 위 꼭지점
-    # + (scale // 2) -> 셀의 중심
     scaled_path_coords = path_array * scale + (scale // 2)
     
     # 연속된 점들을 선으로 연결
@@ -174,21 +181,33 @@ def drawpath(src_image, path_array, scale, color, thickness=3) -> None:
 
 # --- 3. 메인 실행 로직 ---
 
-print("BFS 경로 탐색 중...")
+print("BFS 경로 탐색 시작...")
 # 1. BFS 실행
-path, message = find_path_bfs(l)
-print(message)
+# 반환값에 실행 시간(execution_time)과 탐색 노드 수(nodes_explored) 추가
+path, message, execution_time, nodes_explored = find_path_bfs(l)
+print(f"탐색 결과: **{message}**")
+
+# --- 성능 및 경로 정보 출력 ---
+print("\n--- 📊 BFS 성능 및 경로 정보 ---")
+print(f"**실행 시간:** {execution_time:.6f} 초")
+print(f"**탐색 노드 수:** {nodes_explored} 개")
 
 if path:
+    path_length = len(path)
+    print(f"**경로 길이:** {path_length} 스텝") # S와 G 포함한 길이
+
     # 2. 맵 이미지 생성
     map_size = 60
     scale = 15 # 15배 확대
     
+    # 맵 데이터 준비: '1'은 벽(YEL), '0'/'S'/'G'는 길(PUR)로 초기화
     map_image = np.zeros((map_size, map_size, 3), np.uint8)
     
-    # S와 G의 좌표 (BFS 결과와는 별개로 시각화용)
-    init_pos = (1, 1) 
-    goal_pos = (58, 58)
+    # S와 G의 실제 좌표 (탐색 함수에서 찾은 값 사용)
+    # 맵 원본 `l`에서 'S'=(1, 1), 'G'=(58, 58)을 직접 찾도록 보정
+    # find_path_bfs 함수에서 start, goal을 찾았으므로, 그 값을 사용합니다.
+    start_pos = path[0] if path else (1, 1)
+    goal_pos = path[-1] if path else (58, 58)
     
     for i in range(map_size):
         for j in range(map_size):
@@ -198,14 +217,11 @@ if path:
                 map_image[i][j] = PUR # 길
 
     # 시작점과 도착점은 RED로 표시
-    map_image[init_pos[0]][init_pos[1]] = RED
+    map_image[start_pos[0]][start_pos[1]] = RED
     map_image[goal_pos[0]][goal_pos[1]] = RED
 
-    # 원본 맵 (축소된 상태)
-    # cv2.imshow("Original Map (60x60)", map_image)
-
     # 3. 맵 업스케일
-    print(f"{scale}배 업스케일링 중...")
+    print(f"\n{scale}배 업스케일링 중...")
     map_upscaled = upscale(map_image, map_size, scale)
     
     # 4. 경로(list)를 Numpy 배열로 변환
@@ -213,14 +229,16 @@ if path:
     
     # 5. 업스케일된 맵에 경로 그리기
     print("경로 그리는 중...")
-    # 경로의 두께(thickness)를 15배의 절반(7) 정도로 굵게 설정
     drawpath(map_upscaled, path_np, scale, RED, thickness=(scale // 2))
 
     # 6. 최종 결과 표시
-    cv2.imshow("BFS Path on Upscaled Map", map_upscaled)
+    # BFS 탐색이 어떻게 이루어지는지 시각적으로 이해하는 데 도움이 될 수 있도록 
+    #  태그를 추가합니다.
+    
+    cv2.imshow("BFS Path on Upscaled Maze Map", map_upscaled)
     
 else:
-    print("경로를 찾지 못했거나 오류가 발생했습니다.")
+    print("경로를 찾지 못했으므로 시각화할 수 없습니다.")
 
 
 cv2.waitKey(0)
