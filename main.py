@@ -5,6 +5,7 @@ from dfs import dfs_search
 from time import time
 from Visualize import drawpath,upscale
 
+# Param = (RunTime,Answer_nodes,path_length)
 def RunAlgorithm(func, map):
     st_time = time()
     explored_nodes,path_length,path = func(map)
