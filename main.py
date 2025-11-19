@@ -8,11 +8,10 @@ from Visualize import drawpath,upscale
 # Param = (RunTime,Answer_nodes,path_length)
 def RunAlgorithm(func, map):
     st_time = time()
-    explored_nodes,path_length,path = func(map)
+    Answer_nodes,path_length = func(map)
     ed_time = time()
-    return (ed_time-st_time),explored_nodes,path_length,path
-
+    return (ed_time-st_time),Answer_nodes,path_length
 
 if __name__ == "__main__":
-    fd_time, fd_node,fd_length,fd_path = RunAlgorithm(astar_search, map)
+    fd_time, fd_node,fd_length = RunAlgorithm(astar_search, map)
     

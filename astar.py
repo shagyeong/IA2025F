@@ -2,6 +2,7 @@ from Maps import map
 from heapq import heappush, heappop
 from math import sqrt
 import time
+
 def Heuristic(a,b): # We are using Menhaten because this map is grid
     (r1,c1),(r2,c2) = a,b #
     return abs(r1-r2) + abs(c2-c1)
@@ -72,7 +73,7 @@ def astar_search(grid):
         if g>g_score.get(current,float('inf')):
             continue
         
-        explored_nodes +=1
+        explored_nodes +=1 #→ Open Set + Closed Set 포함 총 탐색한 노드 수
         
         # reach target
         if current == goal:
@@ -85,7 +86,7 @@ def astar_search(grid):
             
             path_length = len(path)
             
-            return explored_nodes, path_length, path # path is real return
+            return path,path_length  # path is real return
         
         cr,cc = current # deposition row, col
         
@@ -114,26 +115,28 @@ def astar_search(grid):
                 f_score = tentative_g + Heuristic(neighbor,goal) # f값 = g + h = 현재까지 실제 비용 + 휴리스틱(맨해튼)
                 heappush(open_set,(f_score,tentative_g,neighbor)) # open_set(우선순위 큐)에 이웃 노드를 새로운 후보로 삽입
 
-    return explored_nodes, 0, None # if not find.....
+    return path,0  # if not find.....
 
 
-st_time = time.time()
-explored_nodes,path_length,path = astar_search(map)
-ed_etime = time.time()
-print(f"실행 시간: {ed_etime - st_time:.6f} 초")
-print(f"탐색 노드 수: {explored_nodes:,}")   # 2,930 처럼 3자리마다 콤마 표시
-print(f"경로 길이: {path_length}")
+#st_time = time.time()
+#explored_nodes,path_length,path = astar_search(map)
+#ed_etime = time.time()
+#print(f"실행 시간: {ed_etime - st_time:.6f} 초")
+#print(f"탐색 노드 수: {explored_nodes:,}")   # 2,930 처럼 3자리마다 콤마 표시
+#print(f"경로 길이: {path_length}")
 
 # (4) 경로가 있을 경우 격자 위에 표시해 보고 싶다면:
-if path is not None:
-    # S, G는 그대로 두고 0인 길은 '*'로 표시
-    for (r, c) in path:
-        if map[r][c] == 0:      # 지금 map 에서는 0이 int 이니까 '0' 말고 0
-            map[r][c] = '*'     # 경로를 *로 표시
+
+
+#if path is not None:
+#    # S, G는 그대로 두고 0인 길은 '*'로 표시
+#    for (r, c) in path:
+#        if map[r][c] == 0:      # 지금 map 에서는 0이 int 이니까 '0' 말고 0
+#            map[r][c] = '*'     # 경로를 *로 표시
 
     # 격자를 문자열로 다시 출력
-    for row in map:
-        print("".join(str(x) for x in row))
+#    for row in map:
+#        print("".join(str(x) for x in row))
 
-else:
-    print("경로가 없습니다.")
+#else:
+#    print("경로가 없습니다.")
