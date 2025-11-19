@@ -1,9 +1,17 @@
 from Maps import map
 from heapq import heappush, heappop
-
+from math import sqrt
+import time
 def Heuristic(a,b): # We are using Menhaten because this map is grid
-    (r1,c1),(r2,c2) = a,b
+    (r1,c1),(r2,c2) = a,b #
     return abs(r1-r2) + abs(c2-c1)
+
+def Heuristic2(a, b):
+    """유클리드 거리 휴리스틱 (대각선 이동이 허용되거나, 연속 공간 느낌일 때)"""
+    (r1, c1), (r2, c2) = a, b
+    return sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
+
+
 
 def astar_search(grid):
     
@@ -109,7 +117,10 @@ def astar_search(grid):
     return explored_nodes, 0, None # if not find.....
 
 
+st_time = time.time()
 explored_nodes,path_length,path = astar_search(map)
+ed_etime = time.time()
+print(f"실행 시간: {ed_etime - st_time:.6f} 초")
 print(f"탐색 노드 수: {explored_nodes:,}")   # 2,930 처럼 3자리마다 콤마 표시
 print(f"경로 길이: {path_length}")
 
