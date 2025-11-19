@@ -101,9 +101,9 @@ for i in range(0,60,1):
 init=(1,1);  map[1][1]=RED      # 초기 상태
 goal=(58,58);map[58][58]=RED    # 목표 상태
 
-cv2.imshow("map",map)
+#cv2.imshow("map",map)
 map=upscale(map,60,15) # 15배
-cv2.imshow("map_upscale",map)
+#cv2.imshow("map_upscale",map)
 
 # 정답열 경로 표시
 l=[
