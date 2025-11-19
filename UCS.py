@@ -14,7 +14,7 @@ def Heuristic2(a, b):
 
 
 
-def UCS(grid):
+def UCS_search(grid):
     
     rows = len(grid)
     cols = len(grid[0]) if rows>0 else 0
