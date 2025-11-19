@@ -104,6 +104,28 @@ def dfs(x, y):
     path.pop()
     return False
 
+
+def dfs_search(x, y):
+    global explored_nodes
+    if (x, y) == end:
+        path.append((x,y))
+        return True
+
+    visited[x][y] = True
+    path.append((x,y))
+    explored_nodes += 1
+
+    for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+        nx, ny = x+dx, y+dy
+        if 0 <= nx < N and 0 <= ny < M:
+            if not visited[nx][ny] and grid[nx][ny] != 1:
+                if dfs(nx, ny):
+                    return explored_nodes, len(path)
+
+    path.pop()
+    return False
+
+
 found = dfs(*start)
 
 if not found:
