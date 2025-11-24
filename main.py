@@ -30,19 +30,9 @@ if __name__ == "__main__":
     cv2.imshow("path_atar",map_astar)
     cv2.waitKey(0)
 
-<<<<<<< HEAD
     print("\nUniform Cost Search")
     fd_time, fd_node,fd_length = RunAlgorithm(UCS_search, map)
     print("fd_time: ",fd_time,"fd_node: ", fd_node,"fd_length: ",fd_length)
 
     fd_time, fd_node,fd_length = RunAlgorithm(dfs_search, map)
     print("fd_time: ",fd_time,"fd_node: ", fd_node,"fd_length: ",fd_length)
-=======
-    # print("\nAstar Search with Euclidean Heuristic")
-    # fd_time, fd_node,fd_length = RunAlgorithm(Eclid_search, map)
-    # print("fd_time: ",fd_time,''' "fd_node: ", fd_node,''' "fd_length: ",fd_length)
-
-    # print("\nUniform Cost Search")
-    # fd_time, fd_node,fd_length = RunAlgorithm(UCS_search, map)
-    # print("fd_time: ",fd_time,"fd_node: ", fd_node,"fd_length: ",fd_length)
->>>>>>> d474d457b30a9c2c1a2ff0e4247e0d80b9d7ac79
