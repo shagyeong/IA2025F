@@ -173,25 +173,25 @@ def dfs_search(grid):
 
 found = dfs(*start)
 
-if not found:
-    print("경로 없음")
-else:
-    display = [row.copy() for row in grid]
-    for x, y in path:
-        if display[x][y] not in ("S", "G"):
-            display[x][y] = "*"
-
-
-    for row in display:
-        print("".join(str(c) for c in row))
-
-
-    print("\n좌표 경로 순서:")
-    print(" -> ".join(f"({x},{y})" for x, y in path))
-
-    print("\n총 경로 길이:", len(path))
-    end_time = time.time()
-    print(f"실행 시간: {end_time - start_time:.4f}초")
-    print(f"탐색한 노드 수: {explored_nodes}")
+# if not found:
+#     print("경로 없음")
+# else:
+#     display = [row.copy() for row in grid]
+#     for x, y in path:
+#         if display[x][y] not in ("S", "G"):
+#             display[x][y] = "*"
+# 
+# 
+#     for row in display:
+#         print("".join(str(c) for c in row))
+# 
+# 
+#     print("\n좌표 경로 순서:")
+#     print(" -> ".join(f"({x},{y})" for x, y in path))
+# 
+#     print("\n총 경로 길이:", len(path))
+#     end_time = time.time()
+#     print(f"실행 시간: {end_time - start_time:.4f}초")
+#     print(f"탐색한 노드 수: {explored_nodes}")
 
 

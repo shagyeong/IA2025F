@@ -41,11 +41,11 @@ if __name__ == "__main__":
 
     # 1) 실행할 알고리즘들을 (이름, 함수) 튜플로 리스트에 넣기
     algorithms = [
-#        ("A* Search (Manhattan)", astar_search),
-#        ("Uniform Cost Search",   UCS_search),
-#        ("Breadth First Search",  bfs_search),
+        ("A* Search (Manhattan)", astar_search),
+        ("Uniform Cost Search",   UCS_search),
+        ("Breadth First Search",  bfs_search),
         ("Depth First Search",    dfs_search),
-#        ("Greedy Best-First",     greedy_search),
+        ("Greedy Best-First",     greedy_search)#,
 #        ("Lefthand Search",       lefthand_search),
     ]
 
