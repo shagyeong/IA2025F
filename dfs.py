@@ -104,70 +104,50 @@ def dfs(x, y):
     path.pop()
     return False
 
-
 def dfs_search(grid):
-    rows = len(grid)
-    cols = len(grid[0])
+    rows, cols = len(grid), len(grid[0])
 
     # S, G 찾기
-    start = None
-    goal = None
+    start = goal = None
     for r in range(rows):
         for c in range(cols):
             if grid[r][c] == 'S':
                 start = (r, c)
             elif grid[r][c] == 'G':
                 goal = (r, c)
-
     if start is None or goal is None:
         raise Exception("Start or Goal not found")
 
     visited = [[False] * cols for _ in range(rows)]
-    path = []
-    explored_nodes = 0
-
-    # 스택 DFS (재귀 없이 하나의 함수로)
+    parent = {}  # (x,y) -> 부모 좌표
     stack = [start]
 
     while stack:
         x, y = stack.pop()
 
-        # 이미 방문한 노드면 skip
         if visited[x][y]:
             continue
-
         visited[x][y] = True
-        explored_nodes += 1
-        path.append((x, y))
 
-        # 목표 도달
         if (x, y) == goal:
+            # 목표까지 경로 역추적
+            path = []
+            while (x, y) != start:
+                path.append((x, y))
+                x, y = parent[(x, y)]
+            path.append(start)
+            path.reverse()
             return path, len(path)
 
-        # 4방향 탐색 (스택이므로 reverse해서 넣으면 자연스러운 DFS 순서)
+        # 4방향 탐색
         for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
-            nx = x + dx
-            ny = y + dy
+            nx, ny = x + dx, y + dy
             if 0 <= nx < rows and 0 <= ny < cols:
                 if not visited[nx][ny] and grid[nx][ny] != 1:
                     stack.append((nx, ny))
+                    parent[(nx, ny)] = (x, y)
 
-        # 막다른 길이면 되돌아감 (DFS path 유지)
-        while path and not stack:
-            path.pop()
-
-    # 경로 없음
     return [], 0
-
-
-
-    # 실행
-    found = dfs(start[0], start[1])
-
-    if found:
-        return path, len(path)   # ← A*와 동일한 형식
-    else:
-        return [], 0
 
 
 
