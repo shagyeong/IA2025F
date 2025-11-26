@@ -37,8 +37,26 @@ def run_and_show(name, func, map_):
 
     cv2.imshow(name, img)   # 알고리즘 이름으로 창 띄우기
 
+def load_map_from_txt(path: str):
+    grid = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()  # 양 끝 공백/개행 제거
+            if not line:         # 빈 줄은 스킵
+                continue
+            
+            row = []
+            for ch in line:
+                if ch in ("S", "G"):
+                    row.append(ch)        # 시작/목표는 문자열로
+                else:
+                    row.append(int(ch))   # '0', '1' → 0, 1
+            grid.append(row)
+    return grid
+
 
 if __name__ == "__main__":
+    map_txt = load_map_from_txt("map.txt")  # map.txt 파일에서 맵 불러오기
 
     # 1) 실행할 알고리즘들을 (이름, 함수) 튜플로 리스트에 넣기
     algorithms = [
@@ -54,7 +72,7 @@ if __name__ == "__main__":
 
     # 2) for문으로 전부 실행
     for name, func in algorithms:
-        run_and_show(name, func, map)
+        run_and_show(name, func, map_txt)
 
     # 모든 창 띄워놓고 아무 키 누르면 종료
     cv2.waitKey(0)
