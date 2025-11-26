@@ -6,6 +6,7 @@ from Maps import map
 from astar import astar_search
 from UCS import UCS_search
 from bfs import bfs_search
+from Euclid import Eclid_search
 from dfs import dfs_search
 from greedy import greedy_search
 #from lefthand import lefthand_search
@@ -26,7 +27,7 @@ def run_and_show(name, func, map_):
     fd_time, fd_node, fd_length = RunAlgorithm(func, map_)
 
     print(f"fd_time  : {fd_time:.4f} sec")
-    print(f"fd_node  : {fd_node}")       # 필요하면 len(fd_node) 등으로 바꿔도 됨
+    #print(f"fd_node  : {fd_node}")       # 필요하면 len(fd_node) 등으로 바꿔도 됨
     print(f"fd_length: {fd_length}")
 
     # 경로 시각화
@@ -42,10 +43,12 @@ if __name__ == "__main__":
     # 1) 실행할 알고리즘들을 (이름, 함수) 튜플로 리스트에 넣기
     algorithms = [
         ("A* Search (Manhattan)", astar_search),
+        ("A* Search (Euclidean)", Eclid_search),
         ("Uniform Cost Search",   UCS_search),
         ("Breadth First Search",  bfs_search),
         ("Depth First Search",    dfs_search),
         ("Greedy Best-First",     greedy_search)#,
+        
 #        ("Lefthand Search",       lefthand_search),
     ]
 
