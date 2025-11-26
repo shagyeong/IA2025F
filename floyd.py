@@ -1,10 +1,4 @@
-import time
-
-start_time = time.time()
-
-explored_nodes = 0 
-
-grid = [
+map=[
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,"S",0,1,1,0,0,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,0,1,1,0,1,1,1,0,0,0,0,1,0,1,1,0,0,0,1,0,1,1,1,1,1,1,1,0,1,1,1,1,0,0,0,1,0,1],
     [1,1,0,0,0,1,0,0,0,1,1,1,1,1,0,0,1,0,1,0,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,0,1,1,1,0,1,0,0,1,0,0,1,1,0,1,1,1,0,0,1,1,1,0,0,1],
@@ -66,132 +60,57 @@ grid = [
     [1,1,0,0,1,0,1,0,1,1,0,1,0,1,0,1,0,0,1,0,1,1,1,1,1,1,0,1,0,0,1,0,1,1,1,1,1,0,1,1,0,1,1,0,0,1,0,1,1,0,0,0,0,0,0,0,0,0,"G",1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ]
-
-N = len(grid)
-M = len(grid[0])
-
-
-def find_point(grid, target):
-    for i in range(N):
-        for j in range(M):
-            if grid[i][j] == target:
-                return (i,j)
-    return None
-
-start = find_point(grid, "S")
-end = find_point(grid, "G")
-
-visited = [[False]*M for _ in range(N)]
-path = []
-
-def dfs(x, y):
-    global explored_nodes
-    if (x, y) == end:
-        path.append((x,y))
-        return True
-
-    visited[x][y] = True
-    path.append((x,y))
-    explored_nodes += 1
-
-    for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-        nx, ny = x+dx, y+dy
-        if 0 <= nx < N and 0 <= ny < M:
-            if not visited[nx][ny] and grid[nx][ny] != 1:
-                if dfs(nx, ny):
-                    return True
-
-    path.pop()
-    return False
-
-
-def dfs_search(grid):
+def floyd_warshall_grid(grid):
+    import sys
+    INF = sys.maxsize
     rows = len(grid)
     cols = len(grid[0])
-
-    # S, G 찾기
-    start = None
-    goal = None
+    
+    # 좌표 → 노드 번호 매핑
+    def node_number(x, y):
+        return x * cols + y
+    
+    n = rows * cols  # 총 노드 수
+    dist = [[INF]*n for _ in range(n)]
+    
+    # 거리 초기화
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] != 1:  # 벽이 아니면
+                u = node_number(r, c)
+                dist[u][u] = 0
+                for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
+                    nx, ny = r + dx, c + dy
+                    if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] != 1:
+                        v = node_number(nx, ny)
+                        dist[u][v] = 1  # 이동 비용 1
+    
+    # Floyd-Warshall
+    for k in range(n):
+        for i in range(n):
+            for j in range(n):
+                if dist[i][k] + dist[k][j] < dist[i][j]:
+                    dist[i][j] = dist[i][k] + dist[k][j]
+    
+    # S, G 좌표 찾기
+    start = goal = None
     for r in range(rows):
         for c in range(cols):
             if grid[r][c] == 'S':
-                start = (r, c)
+                start = node_number(r, c)
             elif grid[r][c] == 'G':
-                goal = (r, c)
-
+                goal = node_number(r, c)
+    
     if start is None or goal is None:
         raise Exception("Start or Goal not found")
-
-    visited = [[False] * cols for _ in range(rows)]
-    path = []
-    explored_nodes = 0
-
-    # 스택 DFS (재귀 없이 하나의 함수로)
-    stack = [start]
-
-    while stack:
-        x, y = stack.pop()
-
-        # 이미 방문한 노드면 skip
-        if visited[x][y]:
-            continue
-
-        visited[x][y] = True
-        explored_nodes += 1
-        path.append((x, y))
-
-        # 목표 도달
-        if (x, y) == goal:
-            return path, len(path)
-
-        # 4방향 탐색 (스택이므로 reverse해서 넣으면 자연스러운 DFS 순서)
-        for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
-            nx = x + dx
-            ny = y + dy
-            if 0 <= nx < rows and 0 <= ny < cols:
-                if not visited[nx][ny] and grid[nx][ny] != 1:
-                    stack.append((nx, ny))
-
-        # 막다른 길이면 되돌아감 (DFS path 유지)
-        while path and not stack:
-            path.pop()
-
-    # 경로 없음
-    return [], 0
-
-
-
-    # 실행
-    found = dfs(start[0], start[1])
-
-    if found:
-        return path, len(path)   # ← A*와 동일한 형식
+    
+    # 최단 거리 반환
+    distance = dist[start][goal]
+    if distance == INF:
+        return None  # 경로 없음
     else:
-        return [], 0
+        return distance
 
-
-
-found = dfs(*start)
-
-if not found:
-    print("경로 없음")
-else:
-    display = [row.copy() for row in grid]
-    for x, y in path:
-        if display[x][y] not in ("S", "G"):
-            display[x][y] = "*"
-
-
-    for row in display:
-        print("".join(str(c) for c in row))
-
-
-    print("\n좌표 경로 순서:")
-    print(" -> ".join(f"({x},{y})" for x, y in path))
-
-    print("\n총 경로 길이:", len(path))
-    end_time = time.time()
-    print(f"실행 시간: {end_time - start_time:.4f}초")
-    print(f"탐색한 노드 수: {explored_nodes}")
-
-
+# 실행
+distance = floyd_warshall_grid(map)
+print("최단 거리:", distance)

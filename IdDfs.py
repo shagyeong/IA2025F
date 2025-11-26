@@ -1,10 +1,4 @@
-import time
-
-start_time = time.time()
-
-explored_nodes = 0 
-
-grid = [
+grid=[
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,"S",0,1,1,0,0,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,0,1,1,0,1,1,1,0,0,0,0,1,0,1,1,0,0,0,1,0,1,1,1,1,1,1,1,0,1,1,1,1,0,0,0,1,0,1],
     [1,1,0,0,0,1,0,0,0,1,1,1,1,1,0,0,1,0,1,0,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,0,1,1,1,0,1,0,0,1,0,0,1,1,0,1,1,1,0,0,1,1,1,0,0,1],
@@ -67,131 +61,101 @@ grid = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ]
 
-N = len(grid)
-M = len(grid[0])
+
+import time
 
 
-def find_point(grid, target):
-    for i in range(N):
-        for j in range(M):
-            if grid[i][j] == target:
-                return (i,j)
+
+
+
+
+# -------------------------------
+# 0) 시작 시간
+# -------------------------------
+start_time = time.time()
+
+
+# -------------------------------
+# 1) 시작/목적지 좌표 찾기
+# -------------------------------
+start_pos = None
+goal_pos = None
+for r in range(len(grid)):
+    for c in range(len(grid[0])):
+        if grid[r][c] == 'S':
+            start_pos = (r, c)
+        elif grid[r][c] == 'G':
+            goal_pos = (r, c)
+
+
+if not start_pos or not goal_pos:
+    raise ValueError("Start(S) 또는 Goal(G) 좌표가 없음")
+
+
+# -------------------------------
+# 2) IDDFS 함수 정의
+# -------------------------------
+def dls(node, goal, grid, limit, visited, path, explored):
+    x, y = node
+    explored[0] += 1
+
+
+    if node == goal:
+        return path
+
+
+    if limit == 0:
+        return None
+
+
+    rows, cols = len(grid), len(grid[0])
+    for dx, dy in [(1,0), (-1,0), (0,1), (0,-1)]:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] != 1:
+            if (nx, ny) not in visited:
+                visited.add((nx, ny))
+                res = dls((nx, ny), goal, grid, limit - 1, visited, path + [(nx, ny)], explored)
+                if res:
+                    return res
+                visited.remove((nx, ny))
     return None
 
-start = find_point(grid, "S")
-end = find_point(grid, "G")
 
-visited = [[False]*M for _ in range(N)]
-path = []
-
-def dfs(x, y):
-    global explored_nodes
-    if (x, y) == end:
-        path.append((x,y))
-        return True
-
-    visited[x][y] = True
-    path.append((x,y))
-    explored_nodes += 1
-
-    for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-        nx, ny = x+dx, y+dy
-        if 0 <= nx < N and 0 <= ny < M:
-            if not visited[nx][ny] and grid[nx][ny] != 1:
-                if dfs(nx, ny):
-                    return True
-
-    path.pop()
-    return False
+def iddfs(start, goal, grid, max_depth=2000):
+    explored = [0]
+    for depth in range(max_depth):
+        visited = set([start])
+        result = dls(start, goal, grid, depth, visited, [start], explored)
+        if result:
+            return result, explored[0], depth
+    return None, explored[0], -1
 
 
-def dfs_search(grid):
-    rows = len(grid)
-    cols = len(grid[0])
-
-    # S, G 찾기
-    start = None
-    goal = None
-    for r in range(rows):
-        for c in range(cols):
-            if grid[r][c] == 'S':
-                start = (r, c)
-            elif grid[r][c] == 'G':
-                goal = (r, c)
-
-    if start is None or goal is None:
-        raise Exception("Start or Goal not found")
-
-    visited = [[False] * cols for _ in range(rows)]
-    path = []
-    explored_nodes = 0
-
-    # 스택 DFS (재귀 없이 하나의 함수로)
-    stack = [start]
-
-    while stack:
-        x, y = stack.pop()
-
-        # 이미 방문한 노드면 skip
-        if visited[x][y]:
-            continue
-
-        visited[x][y] = True
-        explored_nodes += 1
-        path.append((x, y))
-
-        # 목표 도달
-        if (x, y) == goal:
-            return path, len(path)
-
-        # 4방향 탐색 (스택이므로 reverse해서 넣으면 자연스러운 DFS 순서)
-        for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
-            nx = x + dx
-            ny = y + dy
-            if 0 <= nx < rows and 0 <= ny < cols:
-                if not visited[nx][ny] and grid[nx][ny] != 1:
-                    stack.append((nx, ny))
-
-        # 막다른 길이면 되돌아감 (DFS path 유지)
-        while path and not stack:
-            path.pop()
-
-    # 경로 없음
-    return [], 0
+# -------------------------------
+# 3) IDDFS 실행
+# -------------------------------
+path, explored_nodes, final_depth = iddfs(start_pos, goal_pos, grid)
 
 
-
-    # 실행
-    found = dfs(start[0], start[1])
-
-    if found:
-        return path, len(path)   # ← A*와 동일한 형식
-    else:
-        return [], 0
+end_time = time.time()
 
 
-
-found = dfs(*start)
-
-if not found:
-    print("경로 없음")
-else:
-    display = [row.copy() for row in grid]
-    for x, y in path:
-        if display[x][y] not in ("S", "G"):
-            display[x][y] = "*"
-
-
-    for row in display:
-        print("".join(str(c) for c in row))
-
-
+# -------------------------------
+# 4) 결과 출력
+# -------------------------------
+if path:
     print("\n좌표 경로 순서:")
     print(" -> ".join(f"({x},{y})" for x, y in path))
 
+
     print("\n총 경로 길이:", len(path))
-    end_time = time.time()
-    print(f"실행 시간: {end_time - start_time:.4f}초")
-    print(f"탐색한 노드 수: {explored_nodes}")
+    print(f"사용한 DFS Level (Depth limit): {final_depth}")
+else:
+    print("경로 없음")
+
+
+print(f"탐색한 노드 수: {explored_nodes}")
+print(f"실행 시간: {end_time - start_time:.4f}초")
+
 
 

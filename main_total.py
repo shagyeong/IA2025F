@@ -8,7 +8,7 @@ from UCS import UCS_search
 from bfs import bfs_search
 from dfs import dfs_search
 from greedy import greedy_search
-from lefthand import lefthand_search
+#from lefthand import lefthand_search
 
 from Visualize import drawpath, upscale, colorize
 
@@ -41,12 +41,12 @@ if __name__ == "__main__":
 
     # 1) 실행할 알고리즘들을 (이름, 함수) 튜플로 리스트에 넣기
     algorithms = [
-        ("A* Search (Manhattan)", astar_search),
-        ("Uniform Cost Search",   UCS_search),
-        ("Breadth First Search",  bfs_search),
+#        ("A* Search (Manhattan)", astar_search),
+#        ("Uniform Cost Search",   UCS_search),
+#        ("Breadth First Search",  bfs_search),
         ("Depth First Search",    dfs_search),
-        ("Greedy Best-First",     greedy_search),
-        ("Lefthand Search",       lefthand_search),
+#        ("Greedy Best-First",     greedy_search),
+#        ("Lefthand Search",       lefthand_search),
     ]
 
     # 2) for문으로 전부 실행
