@@ -1,355 +1,243 @@
 import numpy as np
 import cv2
 from time import time
-from Maps import map
+from Maps import map   # 안 써도 상관없지만 그대로 둠
 from heapq import heappush, heappop
 from math import sqrt
 from collections import deque
 import heapq
 
-# 시각화 모듈
-# 색상 세팅
-YEL=(0,255,255) # yellow
-PUR=(153,0,102) # pulple
-RED=(0,0,255)   # red
+# ========================= 시각화 모듈 ========================= #
+
+YEL = (0, 255, 255)  # yellow
+PUR = (153, 0, 102)  # purple
+RED = (0, 0, 255)    # red
 
 # 맵 색상화 함수
 # src: list 0, 1, "S", "G"
-def colorize(src,size)->np.array:
-    dst=np.zeros((size,size,3),np.uint8)
-    for i in range(0,size,1):
-        for j in range(0,size,1):
-            if   src[i][j]==0:dst[i][j]=PUR
-            elif src[i][j]==1:dst[i][j]=YEL
-            else:             dst[i][j]=RED # 시작, 종료 노드
+def colorize(src, size) -> np.array:
+    dst = np.zeros((size, size, 3), np.uint8)
+    for i in range(size):
+        for j in range(size):
+            if   src[i][j] == 0: dst[i][j] = PUR
+            elif src[i][j] == 1: dst[i][j] = YEL
+            else:                dst[i][j] = RED  # 시작, 종료 노드
     return dst
 
 # 맵 업스케일링 함수
-def upscale(src,size,scale)->np.array:
-    row=size*scale
-    col=size*scale
-    dst=np.zeros((row,col,3),np.uint8)
-    for i in range(0,size,1):
-        for j in range(0,size,1):
-            for k in range(0,scale,1):
-                for l in range(0,scale,1):
-                    dst[i*scale+k][j*scale+l]=src[i][j]
+def upscale(src, size, scale) -> np.array:
+    row = size * scale
+    col = size * scale
+    dst = np.zeros((row, col, 3), np.uint8)
+    for i in range(size):
+        for j in range(size):
+            for k in range(scale):
+                for l in range(scale):
+                    dst[i * scale + k][j * scale + l] = src[i][j]
     return dst
 
 # 정답열 경로 표시 함수
-def drawpath(src,ans,scale,thickness)->None:
-    ans=ans*scale # scaled answer coordinate
-    ans=ans+((scale+1)//2)
-    for i in range(0,ans.shape[0]-1,1):
-        ans1=(ans[i][1],  ans[i][0])
-        ans2=(ans[i+1][1],ans[i+1][0])
-        cv2.line(src,ans1,ans2,RED,thickness)
+def drawpath(src, ans, scale, thickness) -> None:
+    ans = ans * scale  # scaled answer coordinate
+    ans = ans + ((scale + 1) // 2)
+    for i in range(ans.shape[0] - 1):
+        ans1 = (ans[i][1],   ans[i][0])
+        ans2 = (ans[i+1][1], ans[i+1][0])
+        cv2.line(src, ans1, ans2, RED, thickness)
 
+# ========================= 휴리스틱 ========================= #
 
+def Heuristic(a, b):        # Manhattan
+    (r1, c1), (r2, c2) = a, b
+    return abs(r1 - r2) + abs(c2 - c1)
 
-
-# astar
-def Heuristic(a,b): # We are using Menhaten because this map is grid
-    (r1,c1),(r2,c2) = a,b #
-    return abs(r1-r2) + abs(c2-c1)
-
-def Heuristic2(a, b):
-    """유클리드 거리 휴리스틱 (대각선 이동이 허용되거나, 연속 공간 느낌일 때)"""
+def Heuristic2(a, b):       # Euclidean
     (r1, c1), (r2, c2) = a, b
     return sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
 
-
+# ========================= A* (Manhattan) ========================= #
 
 def astar_search(grid):
-    
-    rows = len(grid)
-    cols = len(grid[0]) if rows>0 else 0
-    
-    ## 1. Start S, Target G
-    start = None
-    goal = None
-    
-    for r in range(rows):
-        for c in range(cols):
-            if(grid[r][c] =="S"):
-                start = (r,c)
-            elif grid[r][c] == "G":
-                goal = (r,c)
-    
-    if start is None or goal is None:
-        raise Exception("Start or Target Error")
-    
-    
-    #print(f"[INIT] start={start}, goal={goal}, rows={rows}, cols={cols}")
-
-    # A start Ready
-    
-    # open_set: 아직 탐색할 후보 노드들을 저장하는 우선순위 큐(최소 힙)
-    # 원소 형태: (f값, g값, (row, col))
-    #   - f = g + h
-    #   - g = 시작점에서 현재 노드까지의 실제 비용 (여기선 이동 칸 수)
-    #   - h = 휴리스틱(맨해튼 거리)
-    
-    open_set = []
-    heappush(open_set, (Heuristic(start,goal),0,start))
-    
-    
-    # came_from: 각 노드에 도달할 때 사용한 '이전 노드'를 기록하는 딕셔너리
-    #   - key: (row, col) 현재 노드
-    #   - value: (row, col) 현재 노드로 오기 직전의 노드
-    came_from = {}  # (r,c) -> before (r,c)
-    
-    # g_score: 시작점에서 특정 노드까지 도달하는데 드는 '최소 비용'을 저장
-    #   - key: (row, col)
-    #   - value: g 값 (시작에서 여기까지의 최소 거리)
-    g_score = {start:0} # real cost at startPoint, dic
-    
-    directions = [(-1,0),(1,0),(0,-1),(0,1)]
-    
-    explored_nodes = 0
-    
-    # main Loop
-    while open_set:
-        # f: 현재 후보들 중 가장 유망한(예상 총 비용이 최소인) 노드의 f값
-        # g: 그 노드까지의 실제 비용
-        # current: 현재 노드 위치 (row, col)
-        f,g, current = heappop(open_set)
-        
-        # current 노드에 대해 이미 더 좋은 g값이 기록되있으면 넘어감
-        if g>g_score.get(current,float('inf')):
-            continue
-        
-        explored_nodes +=1 #→ Open Set + Closed Set 포함 총 탐색한 노드 수
-        
-        # reach target
-        if current == goal:
-            
-            path = [current]
-            while current in came_from: # Put in value Backtracking
-                current = came_from[current]
-                path.append(current) # Add path the node
-            path.reverse()           # 역추적-> 반대 뒤집힘, -> Reverse
-            
-            path_length = len(path)
-            
-            return path,path_length  # path is real return
-        
-        cr,cc = current # deposition row, col
-        
-        for dr,dc in directions:
-            nr = cr+dr
-            nc = cc+dc
-            
-            if not (0<=nr<rows and 0<=nc<cols):
-                continue
-            
-            cell = grid[nr][nc]
-            
-            if cell == 1:
-                continue
-            
-            neighbor = (nr,nc) # location of neighbor
-
-            # tentative_g: 현재 노드를 거쳐서 이웃 노드에 도달했을 때의
-            #              '후보 g값' (현재 g + 이동 비용 1)            
-            tentative_g = g+1 # move One Step, One Step's Weight is 1
-            
-            # if find more valuable than last value
-            if tentative_g < g_score.get(neighbor,float('inf')): # Get(A,B), A: key to find, B: if not find, default value
-                came_from[neighbor] = current # record to current
-                g_score[neighbor] = tentative_g  # neighbor까지의 최소 g값을 갱신
-                f_score = tentative_g + Heuristic(neighbor,goal) # f값 = g + h = 현재까지 실제 비용 + 휴리스틱(맨해튼)
-                heappush(open_set,(f_score,tentative_g,neighbor)) # open_set(우선순위 큐)에 이웃 노드를 새로운 후보로 삽입
-
-    return path,0  # if not find.....
-    
-
-
-# UCS
-def UCS_search(grid):
-    
-    rows = len(grid)
-    cols = len(grid[0]) if rows>0 else 0
-    
-    ## 1. Start S, Target G
-    start = None
-    goal = None
-    
-    for r in range(rows):
-        for c in range(cols):
-            if(grid[r][c] =="S"):
-                start = (r,c)
-            elif grid[r][c] == "G":
-                goal = (r,c)
-    
-    if start is None or goal is None:
-        raise Exception("Start or Target Error")
-    
-    
-    #print(f"[INIT] start={start}, goal={goal}, rows={rows}, cols={cols}")
-
-    # A start Ready
-    
-    # open_set: 아직 탐색할 후보 노드들을 저장하는 우선순위 큐(최소 힙)
-    # 원소 형태: (f값, g값, (row, col))
-    #   - f = g + h
-    #   - g = 시작점에서 현재 노드까지의 실제 비용 (여기선 이동 칸 수)
-    #   - h = 휴리스틱(맨해튼 거리)
-    
-    open_set = []
-    heappush(open_set, (0,0,start))
-    
-    
-    # came_from: 각 노드에 도달할 때 사용한 '이전 노드'를 기록하는 딕셔너리
-    #   - key: (row, col) 현재 노드
-    #   - value: (row, col) 현재 노드로 오기 직전의 노드
-    came_from = {}  # (r,c) -> before (r,c)
-    
-    # g_score: 시작점에서 특정 노드까지 도달하는데 드는 '최소 비용'을 저장
-    #   - key: (row, col)
-    #   - value: g 값 (시작에서 여기까지의 최소 거리)
-    g_score = {start:0} # real cost at startPoint, dic
-    
-    directions = [(-1,0),(1,0),(0,-1),(0,1)]
-    
-    explored_nodes = 0
-    
-    # main Loop
-    while open_set:
-        # f: 현재 후보들 중 가장 유망한(예상 총 비용이 최소인) 노드의 f값
-        # g: 그 노드까지의 실제 비용
-        # current: 현재 노드 위치 (row, col)
-        f,g, current = heappop(open_set)
-        
-        # current 노드에 대해 이미 더 좋은 g값이 기록되있으면 넘어감
-        if g>g_score.get(current,float('inf')):
-            continue
-        
-        explored_nodes +=1 #→ Open Set + Closed Set 포함 총 탐색한 노드 수
-        
-        # reach target
-        if current == goal:
-            
-            path = [current]
-            while current in came_from: # Put in value Backtracking
-                current = came_from[current]
-                path.append(current) # Add path the node
-            path.reverse()           # 역추적-> 반대 뒤집힘, -> Reverse
-            
-            path_length = len(path)
-            
-            return path,path_length  # path is real return
-        
-        cr,cc = current # deposition row, col
-        
-        for dr,dc in directions:
-            nr = cr+dr
-            nc = cc+dc
-            
-            if not (0<=nr<rows and 0<=nc<cols):
-                continue
-            
-            cell = grid[nr][nc]
-            
-            if cell == 1:
-                continue
-            
-            neighbor = (nr,nc) # location of neighbor
-
-            # tentative_g: 현재 노드를 거쳐서 이웃 노드에 도달했을 때의
-            #              '후보 g값' (현재 g + 이동 비용 1)            
-            tentative_g = g+1 # move One Step, One Step's Weight is 1
-            
-            # if find more valuable than last value
-            if tentative_g < g_score.get(neighbor,float('inf')): # Get(A,B), A: key to find, B: if not find, default value
-                came_from[neighbor] = current # record to current
-                g_score[neighbor] = tentative_g  # neighbor까지의 최소 g값을 갱신
-                f_score = tentative_g #+ Heuristic2(neighbor,goal) # f값 = g + h = 현재까지 실제 비용 + 휴리스틱(맨해튼)
-                heappush(open_set,(f_score,tentative_g,neighbor)) # open_set(우선순위 큐)에 이웃 노드를 새로운 후보로 삽입
-
-    return path,0  # if not find.....
-
-
-
-# BFS
-def bfs_search(grid):
-    
     rows = len(grid)
     cols = len(grid[0]) if rows > 0 else 0
-    
-    # 1. Start S, Target G 위치 찾기
-    start = None
-    goal = None
+
+    # S, G 찾기
+    start = goal = None
     for r in range(rows):
         for c in range(cols):
             if grid[r][c] == "S":
                 start = (r, c)
             elif grid[r][c] == "G":
                 goal = (r, c)
-    
     if start is None or goal is None:
         raise Exception("Start or Target Error")
-    
-    # open_set: 탐색할 후보 노드를 저장하는 큐 (FIFO)
-    open_set = deque([start])
-    
-    # came_from: 경로 역추적을 위한 이전 노드 기록 (동시에 방문 기록 역할)
-    came_from = {start: None}
-    
-    # g_score: 시작점에서 현재 노드까지의 실제 비용
-    g_score = {start: 0} 
-    
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # 상하좌우
-    
+
+    open_set = []
+    heappush(open_set, (Heuristic(start, goal), 0, start))
+
+    came_from = {}
+    g_score = {start: 0}
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]
+
     explored_nodes = 0
-    
-    # main Loop
+
     while open_set:
-        current = open_set.popleft() # 큐에서 노드를 꺼냄
-        
+        f, g, current = heappop(open_set)
+
+        if g > g_score.get(current, float('inf')):
+            continue
+
         explored_nodes += 1
-        
-        # 목표 도달 시 경로 재구성 및 반환
+
+        if current == goal:
+            path = [current]
+            while current in came_from:
+                current = came_from[current]
+                path.append(current)
+            path.reverse()
+            path_length = len(path)
+            return path, path_length, explored_nodes
+
+        cr, cc = current
+        for dr, dc in directions:
+            nr, nc = cr + dr, cc + dc
+            if not (0 <= nr < rows and 0 <= nc < cols):
+                continue
+            cell = grid[nr][nc]
+            if cell == 1:
+                continue
+
+            neighbor = (nr, nc)
+            tentative_g = g + 1
+
+            if tentative_g < g_score.get(neighbor, float('inf')):
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g
+                f_score = tentative_g + Heuristic(neighbor, goal)
+                heappush(open_set, (f_score, tentative_g, neighbor))
+
+    return [], 0, explored_nodes
+
+# ========================= UCS ========================= #
+
+def UCS_search(grid):
+    rows = len(grid)
+    cols = len(grid[0]) if rows > 0 else 0
+
+    start = goal = None
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == "S":
+                start = (r, c)
+            elif grid[r][c] == "G":
+                goal = (r, c)
+    if start is None or goal is None:
+        raise Exception("Start or Target Error")
+
+    open_set = []
+    heappush(open_set, (0, 0, start))
+
+    came_from = {}
+    g_score = {start: 0}
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]
+
+    explored_nodes = 0
+
+    while open_set:
+        f, g, current = heappop(open_set)
+
+        if g > g_score.get(current, float('inf')):
+            continue
+
+        explored_nodes += 1
+
+        if current == goal:
+            path = [current]
+            while current in came_from:
+                current = came_from[current]
+                path.append(current)
+            path.reverse()
+            path_length = len(path)
+            return path, path_length, explored_nodes
+
+        cr, cc = current
+        for dr, dc in directions:
+            nr, nc = cr + dr, cc + dc
+            if not (0 <= nr < rows and 0 <= nc < cols):
+                continue
+            cell = grid[nr][nc]
+            if cell == 1:
+                continue
+
+            neighbor = (nr, nc)
+            tentative_g = g + 1
+
+            if tentative_g < g_score.get(neighbor, float('inf')):
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g
+                f_score = tentative_g  # 휴리스틱 없음
+                heappush(open_set, (f_score, tentative_g, neighbor))
+
+    return [], 0, explored_nodes
+
+# ========================= BFS ========================= #
+
+def bfs_search(grid):
+    rows = len(grid)
+    cols = len(grid[0]) if rows > 0 else 0
+
+    start = goal = None
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == "S":
+                start = (r, c)
+            elif grid[r][c] == "G":
+                goal = (r, c)
+    if start is None or goal is None:
+        raise Exception("Start or Target Error")
+
+    open_set = deque([start])
+    came_from = {start: None}
+    g_score = {start: 0}
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]
+
+    explored_nodes = 0
+
+    while open_set:
+        current = open_set.popleft()
+        explored_nodes += 1
+
         if current == goal:
             path = [current]
             while current in came_from and came_from[current] is not None:
                 current = came_from[current]
-                path.append(current) 
+                path.append(current)
             path.reverse()
-            return path, len(path)
-        
+            return path, len(path), explored_nodes
+
         cr, cc = current
-        
         for dr, dc in directions:
             nr, nc = cr + dr, cc + dc
-            
-            # 경계 확인
             if not (0 <= nr < rows and 0 <= nc < cols):
                 continue
-            
             neighbor = (nr, nc)
             cell = grid[nr][nc]
-            
-            # 장애물 확인
             if cell == 1:
                 continue
-            
-            # **핵심:** 아직 방문하지 않은 노드만 처리 (came_from에 없는 경우)
+
             if neighbor not in came_from:
-                
                 tentative_g = g_score[current] + 1
                 g_score[neighbor] = tentative_g
-                
-                came_from[neighbor] = current # 이전 노드 기록
-                open_set.append(neighbor)    # 큐에 삽입
-                
-    return None, 0 # 경로를 찾지 못한 경우
+                came_from[neighbor] = current
+                open_set.append(neighbor)
 
+    return [], 0, explored_nodes
+
+# ========================= DFS ========================= #
 
 def dfs_search(grid):
     rows, cols = len(grid), len(grid[0])
 
-    # S, G 찾기
     start = goal = None
     for r in range(rows):
         for c in range(cols):
@@ -361,8 +249,10 @@ def dfs_search(grid):
         raise Exception("Start or Goal not found")
 
     visited = [[False] * cols for _ in range(rows)]
-    parent = {}  # (x,y) -> 부모 좌표
+    parent = {}
     stack = [start]
+
+    explored_nodes = 0
 
     while stack:
         x, y = stack.pop()
@@ -370,18 +260,17 @@ def dfs_search(grid):
         if visited[x][y]:
             continue
         visited[x][y] = True
+        explored_nodes += 1
 
         if (x, y) == goal:
-            # 목표까지 경로 역추적
             path = []
             while (x, y) != start:
                 path.append((x, y))
                 x, y = parent[(x, y)]
             path.append(start)
             path.reverse()
-            return path, len(path)
+            return path, len(path), explored_nodes
 
-        # 4방향 탐색
         for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
             nx, ny = x + dx, y + dy
             if 0 <= nx < rows and 0 <= ny < cols:
@@ -389,229 +278,158 @@ def dfs_search(grid):
                     stack.append((nx, ny))
                     parent[(nx, ny)] = (x, y)
 
-    return [], 0
+    return [], 0, explored_nodes
 
+# ========================= Greedy Best-First ========================= #
 
-
-# Greedy BFS
 def manhattan_distance(p1, p2):
     return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
 def greedy_search(grid):
-    
     rows = len(grid)
     cols = len(grid[0]) if rows > 0 else 0
-    
-    # 1. Start S, Target G 위치 찾기
-    start = None
-    goal = None
+
+    start = goal = None
     for r in range(rows):
         for c in range(cols):
             if grid[r][c] == "S":
                 start = (r, c)
             elif grid[r][c] == "G":
                 goal = (r, c)
-    
     if start is None or goal is None:
-        return None, 0
+        return [], 0, 0
 
-    # open_set: (h값, (row, col)) 형태의 우선순위 큐 (h = 휴리스틱)
-    initial_h = manhattan_distance(start, goal)
-    # heapq는 튜플의 첫 번째 요소를 기준으로 정렬합니다.
     open_set = []
+    initial_h = manhattan_distance(start, goal)
     heapq.heappush(open_set, (initial_h, start))
-    
-    # came_from: 경로 역추적을 위한 이전 노드 기록
+
     came_from = {start: None}
-    
-    # visited: 이미 탐색했거나 큐에 추가했던 노드를 다시 처리하지 않기 위한 집합
     visited = {start}
-    
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # 상하좌우
-    
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]
+
     explored_nodes = 0
-    
-    # main Loop
+
     while open_set:
-        # h: 현재 후보들 중 가장 목표에 가깝다고 예상되는 노드의 h값
-        # current: 현재 노드 위치 (row, col)
         h, current = heapq.heappop(open_set)
-        
         explored_nodes += 1
-        
-        # 목표 도달 시 경로 재구성 및 반환
+
         if current == goal:
             path = [current]
             while current in came_from and came_from[current] is not None:
                 current = came_from[current]
                 path.append(current)
             path.reverse()
-            return path, len(path)
-        
+            return path, len(path), explored_nodes
+
         cr, cc = current
-        
         for dr, dc in directions:
             nr, nc = cr + dr, cc + dc
-            neighbor = (nr, nc)
-            
-            # 맵 경계 확인
             if not (0 <= nr < rows and 0 <= nc < cols):
                 continue
-            
             cell = grid[nr][nc]
-            
-            # 장애물(1) 확인
             if cell == 1:
                 continue
-            
-            # **핵심:** 아직 방문하지 않은 노드만 큐에 추가
+
+            neighbor = (nr, nc)
             if neighbor not in visited:
-                
-                new_h = manhattan_distance(neighbor, goal) # 새로운 h값 계산
-                
+                new_h = manhattan_distance(neighbor, goal)
                 visited.add(neighbor)
-                came_from[neighbor] = current # 이전 노드 기록
-                
-                # 큐에 추가: (h값, 노드) -> h가 낮을수록 우선순위 높음
+                came_from[neighbor] = current
                 heapq.heappush(open_set, (new_h, neighbor))
-                
-    return None, 0 # 경로를 찾지 못한 경우
 
+    return [], 0, explored_nodes
 
+# ========================= A* (Euclid) ========================= #
 
-# Euclid
 def Eclid_search(grid):
-    
     rows = len(grid)
-    cols = len(grid[0]) if rows>0 else 0
-    
-    ## 1. Start S, Target G
-    start = None
-    goal = None
-    
+    cols = len(grid[0]) if rows > 0 else 0
+
+    start = goal = None
     for r in range(rows):
         for c in range(cols):
-            if(grid[r][c] =="S"):
-                start = (r,c)
+            if grid[r][c] == "S":
+                start = (r, c)
             elif grid[r][c] == "G":
-                goal = (r,c)
-    
+                goal = (r, c)
     if start is None or goal is None:
         raise Exception("Start or Target Error")
-    
-    
-    #print(f"[INIT] start={start}, goal={goal}, rows={rows}, cols={cols}")
 
-    # A start Ready
-    
-    # open_set: 아직 탐색할 후보 노드들을 저장하는 우선순위 큐(최소 힙)
-    # 원소 형태: (f값, g값, (row, col))
-    #   - f = g + h
-    #   - g = 시작점에서 현재 노드까지의 실제 비용 (여기선 이동 칸 수)
-    #   - h = 휴리스틱(맨해튼 거리)
-    
     open_set = []
-    heappush(open_set, (Heuristic2(start,goal),0,start))
-    
-    
-    # came_from: 각 노드에 도달할 때 사용한 '이전 노드'를 기록하는 딕셔너리
-    #   - key: (row, col) 현재 노드
-    #   - value: (row, col) 현재 노드로 오기 직전의 노드
-    came_from = {}  # (r,c) -> before (r,c)
-    
-    # g_score: 시작점에서 특정 노드까지 도달하는데 드는 '최소 비용'을 저장
-    #   - key: (row, col)
-    #   - value: g 값 (시작에서 여기까지의 최소 거리)
-    g_score = {start:0} # real cost at startPoint, dic
-    
-    directions = [(-1,0),(1,0),(0,-1),(0,1)]
-    
+    heappush(open_set, (Heuristic2(start, goal), 0, start))
+
+    came_from = {}
+    g_score = {start: 0}
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]
+
     explored_nodes = 0
-    
-    # main Loop
+
     while open_set:
-        # f: 현재 후보들 중 가장 유망한(예상 총 비용이 최소인) 노드의 f값
-        # g: 그 노드까지의 실제 비용
-        # current: 현재 노드 위치 (row, col)
-        f,g, current = heappop(open_set)
-        
-        # current 노드에 대해 이미 더 좋은 g값이 기록되있으면 넘어감
-        if g>g_score.get(current,float('inf')):
+        f, g, current = heappop(open_set)
+
+        if g > g_score.get(current, float('inf')):
             continue
-        
-        explored_nodes +=1 #→ Open Set + Closed Set 포함 총 탐색한 노드 수
-        
-        # reach target
+
+        explored_nodes += 1
+
         if current == goal:
-            
             path = [current]
-            while current in came_from: # Put in value Backtracking
+            while current in came_from:
                 current = came_from[current]
-                path.append(current) # Add path the node
-            path.reverse()           # 역추적-> 반대 뒤집힘, -> Reverse
-            
+                path.append(current)
+            path.reverse()
             path_length = len(path)
-            
-            return path,path_length  # path is real return
-        
-        cr,cc = current # deposition row, col
-        
-        for dr,dc in directions:
-            nr = cr+dr
-            nc = cc+dc
-            
-            if not (0<=nr<rows and 0<=nc<cols):
+            return path, path_length, explored_nodes
+
+        cr, cc = current
+        for dr, dc in directions:
+            nr, nc = cr + dr, cc + dc
+            if not (0 <= nr < rows and 0 <= nc < cols):
                 continue
-            
             cell = grid[nr][nc]
-            
             if cell == 1:
                 continue
-            
-            neighbor = (nr,nc) # location of neighbor
 
-            # tentative_g: 현재 노드를 거쳐서 이웃 노드에 도달했을 때의
-            #              '후보 g값' (현재 g + 이동 비용 1)            
-            tentative_g = g+1 # move One Step, One Step's Weight is 1
-            
-            # if find more valuable than last value
-            if tentative_g < g_score.get(neighbor,float('inf')): # Get(A,B), A: key to find, B: if not find, default value
-                came_from[neighbor] = current # record to current
-                g_score[neighbor] = tentative_g  # neighbor까지의 최소 g값을 갱신
-                f_score = tentative_g + Heuristic2(neighbor,goal) # f값 = g + h = 현재까지 실제 비용 + 휴리스틱(맨해튼)
-                heappush(open_set,(f_score,tentative_g,neighbor)) # open_set(우선순위 큐)에 이웃 노드를 새로운 후보로 삽입
+            neighbor = (nr, nc)
+            tentative_g = g + 1
 
-    return path,0  # if not find.....
+            if tentative_g < g_score.get(neighbor, float('inf')):
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g
+                f_score = tentative_g + Heuristic2(neighbor, goal)
+                heappush(open_set, (f_score, tentative_g, neighbor))
 
+    return [], 0, explored_nodes
 
-#===============================  User functions ===============================#
+# ========================= 공통 유틸 ========================= #
 
-# Param = (RunTime, Answer_nodes, path_length)
+# Param = (RunTime, Answer_nodes, path_length, explored_nodes)
 def RunAlgorithm(func, map_):
     st_time = time()
-    answer_nodes, path_length = func(map_)   # <- 알고리즘 함수 호출
+    path, path_length, explored_nodes = func(map_)
     ed_time = time()
-    return (ed_time - st_time), answer_nodes, path_length
-
+    return (ed_time - st_time), path, path_length, explored_nodes
 
 def run_and_show(name, func, map_):
-    """알고리즘 실행 + 경로 시각화 이미지 + 시간/길이 반환"""
+    """알고리즘 실행 + 경로 시각화 이미지 + 시간/길이/노드수 반환"""
     print(f"\n=== {name} ===")
-    fd_time, fd_node, fd_length = RunAlgorithm(func, map_)
+    fd_time, fd_node, fd_length, fd_explored = RunAlgorithm(func, map_)
 
-    print(f"fd_time  : {fd_time:.4f} sec")
-    print(f"fd_length: {fd_length}")
+    print(f"fd_time     : {fd_time:.4f} sec")
+    print(f"fd_length   : {fd_length}")
+    print(f"fd_explored : {fd_explored}")
 
-    # 경로 시각화
-    img = colorize(map_, 60)
-    img = upscale(img, 60, 7)
-    drawpath(img, np.array(fd_node, np.uint32), 7, 2)
+    size = len(map_)
+    img = colorize(map_, size)
+    img = upscale(img, size, 7)
+    if len(fd_node) > 0:
+        drawpath(img, np.array(fd_node, np.uint32), 7, 2)
 
-    return img, fd_time, fd_length
+    return img, fd_time, fd_length, fd_explored
 
-def make_header(width, height, title, time_sec, path_len):
+def make_header(width, height, title, time_sec, path_len, node_cnt):
     """
-    알고리즘 이름 + 시간 + 경로 길이를 가운데 정렬해서 그린 헤더 이미지 생성
+    알고리즘 이름 + 시간 + 경로 길이 + 탐색 노드 수를 가운데 정렬해서 그린 헤더
     """
     header = np.ones((height, width, 3), dtype=np.uint8) * 255  # 흰 배경
 
@@ -619,6 +437,7 @@ def make_header(width, height, title, time_sec, path_len):
         title,
         f"time: {time_sec:.4f} s",
         f"length: {path_len}",
+        f"nodes: {node_cnt}",
     ]
 
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -631,8 +450,8 @@ def make_header(width, height, title, time_sec, path_len):
 
     for i, text in enumerate(lines):
         (tw, th), _ = cv2.getTextSize(text, font, font_scale, thickness)
-        x = (width - tw) // 2            # 가로 가운데 정렬
-        y = y0 + i * line_height         # 줄 간격
+        x = (width - tw) // 2
+        y = y0 + i * line_height
         cv2.putText(header, text, (x, y), font, font_scale,
                     (0, 0, 0), thickness, cv2.LINE_AA)
 
@@ -640,25 +459,22 @@ def make_header(width, height, title, time_sec, path_len):
 
 def make_labeled_grid(results, rows, cols):
     """
-    results: [(name, img, time, length), ...]
+    results: [(name, img, time, length, explored), ...]
     rows, cols: 그래프 기준 (예: 2행 3열)
-    최종 캔버스는 각 그래프 위에 헤더를 하나씩 올려서
-    행당 (헤더+그래프) 세트가 rows개 생김.
     """
     if not results:
         return None
 
-    # 그래프 이미지 크기
     sample_img = results[0][1]
     gh, gw, gc = sample_img.shape
 
-    header_h = 60  # 헤더 높이 (원하면 조절)
+    header_h = 60
 
     canvas_h = rows * (header_h + gh)
     canvas_w = cols * gw
     canvas = np.zeros((canvas_h, canvas_w, gc), dtype=np.uint8)
 
-    for idx, (name, img, t, length) in enumerate(results):
+    for idx, (name, img, t, length, explored) in enumerate(results):
         if idx >= rows * cols:
             break
 
@@ -669,59 +485,51 @@ def make_labeled_grid(results, rows, cols):
         header_y0 = r * (header_h + gh)
         graph_y0 = header_y0 + header_h
 
-        header_img = make_header(gw, header_h, name, t, length)
+        header_img = make_header(gw, header_h, name, t, length, explored)
 
         canvas[header_y0:header_y0 + header_h, x0:x0 + gw] = header_img
         canvas[graph_y0:graph_y0 + gh, x0:x0 + gw] = img
 
     return canvas
 
-
-
 def load_map_from_txt(path: str):
     grid = []
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
-            line = line.strip()  # 양 끝 공백/개행 제거
-            if not line:         # 빈 줄은 스킵
+            line = line.strip()
+            if not line:
                 continue
-            
             row = []
             for ch in line:
                 if ch in ("S", "G"):
-                    row.append(ch)        # 시작/목표는 문자열로
+                    row.append(ch)
                 else:
-                    row.append(int(ch))   # '0', '1' → 0, 1
+                    row.append(int(ch))
             grid.append(row)
     return grid
 
+# ========================= main ========================= #
 
 if __name__ == "__main__":
-    map_txt = load_map_from_txt("map.txt")  # map.txt 파일에서 맵 불러오기
+    map_txt = load_map_from_txt("map.txt")
 
-    # 1) 실행할 알고리즘들을 (이름, 함수) 튜플로 리스트에 넣기
     algorithms = [
         ("A* Search (Manhattan)", astar_search),
         ("Uniform Cost Search",   UCS_search),
         ("Breadth First Search",  bfs_search),
         ("Depth First Search",    dfs_search),
         ("Greedy Best-First",     greedy_search),
-        ("Euclid",                Eclid_search)
-#        ("Lefthand Search",       lefthand_search),
+        ("Euclid",                Eclid_search),
     ]
 
-    results = []  # (name, img, time, length) 저장
+    results = []  # (name, img, time, length, explored)
     for name, func in algorithms:
-        img, t, length = run_and_show(name, func, map_txt)
-        results.append((name, img, t, length))
-        
-    # 2행 3열 그리드로 합치기
+        img, t, length, explored = run_and_show(name, func, map_txt)
+        results.append((name, img, t, length, explored))
+
     grid_img = make_labeled_grid(results, rows=2, cols=3)
 
-    # 파일 저장
     cv2.imwrite("result_path.png", grid_img)
-
-    # 화면 표시
     cv2.imshow("All Algorithms (2x3 Grid + Header)", grid_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
