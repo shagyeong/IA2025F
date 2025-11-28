@@ -1,4 +1,3 @@
-from Maps import map
 from heapq import heappush, heappop
 from math import sqrt
 import time
@@ -14,7 +13,7 @@ def Heuristic2(a, b):
 
 
 
-def astar_search(grid):
+def UCS_search(grid):
     
     rows = len(grid)
     cols = len(grid[0]) if rows>0 else 0
@@ -45,7 +44,7 @@ def astar_search(grid):
     #   - h = 휴리스틱(맨해튼 거리)
     
     open_set = []
-    heappush(open_set, (Heuristic(start,goal),0,start))
+    heappush(open_set, (0,0,start))
     
     
     # came_from: 각 노드에 도달할 때 사용한 '이전 노드'를 기록하는 딕셔너리
@@ -112,7 +111,7 @@ def astar_search(grid):
             if tentative_g < g_score.get(neighbor,float('inf')): # Get(A,B), A: key to find, B: if not find, default value
                 came_from[neighbor] = current # record to current
                 g_score[neighbor] = tentative_g  # neighbor까지의 최소 g값을 갱신
-                f_score = tentative_g + Heuristic(neighbor,goal) # f값 = g + h = 현재까지 실제 비용 + 휴리스틱(맨해튼)
+                f_score = tentative_g #+ Heuristic2(neighbor,goal) # f값 = g + h = 현재까지 실제 비용 + 휴리스틱(맨해튼)
                 heappush(open_set,(f_score,tentative_g,neighbor)) # open_set(우선순위 큐)에 이웃 노드를 새로운 후보로 삽입
 
     return path,0  # if not find.....

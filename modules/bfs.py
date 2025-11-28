@@ -1,4 +1,3 @@
-from Maps import map
 from collections import deque # BFS를 위해 큐(deque)를 사용
 import time
 
