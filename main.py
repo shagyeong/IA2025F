@@ -2,15 +2,14 @@ import numpy as np
 import cv2
 from time import time
 
-from Maps import map
-from astar import astar_search
-from UCS import UCS_search
-from bfs import bfs_search
-from dfs import dfs_search
-from greedy import greedy_search
+from modules.Maps import map
+from modules.astar import astar_search
+from modules.UCS import UCS_search
+from modules.bfs import bfs_search
+from modules.dfs import dfs_search
+from modules.greedy import greedy_search
 #from lefthand import lefthand_search
-
-from Visualize import drawpath, upscale, colorize
+from modules.Visualize import drawpath, upscale, colorize
 
 # Param = (RunTime, Answer_nodes, path_length)
 def RunAlgorithm(func, map_):

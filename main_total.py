@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 from time import time
-from Maps import map   # 안 써도 상관없지만 그대로 둠
 from heapq import heappush, heappop
 from math import sqrt
 from collections import deque
